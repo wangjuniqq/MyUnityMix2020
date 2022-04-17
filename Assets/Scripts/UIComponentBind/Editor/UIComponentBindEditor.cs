@@ -6,7 +6,7 @@ using System;
 
 namespace KH.UIBinding
 {
-    [CustomEditor(typeof(UIComponentBind))]
+    //[CustomEditor(typeof(UIComponentBind))]
     public class UIComponentBindEditor : Editor
     {
         public static GUISkin skin = null;

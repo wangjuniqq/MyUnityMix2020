@@ -1,10 +1,14 @@
-﻿using System;
+﻿using System.Linq;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 using System.Text;
 // using LuaInterface;
 // using KH.Lua;
+using Sirenix.OdinInspector;
+using Sirenix.Serialization;
+using Sirenix.Utilities.Editor;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -13,15 +17,54 @@ using UnityEditor;
 namespace KH.UIBinding
 {
     [DisallowMultipleComponent]
+    [HideMonoScript]
     public class UIComponentBind : MonoBehaviour
     {
+        [OnInspectorGUI("DrawSeperateLine", append: false)]
+        // [ListDrawerSettings(DraggableItems = false, Expanded = true)]
+        // [HideLabel]
         public List<BindItemInfo> BindItemInfos;
+        private void DrawSeperateLine()
+        {
+            string titleStr = "Component Area";
+            GUIStyle textStyle = new GUIStyle("HeaderLabel")
+            {
+                fontSize = 14,
+                alignment = TextAnchor.MiddleCenter,
+                fontStyle = FontStyle.Bold,
+            };
+
+            GUIHelper.PushColor(new Color(173.0f / 255, 216.0f / 255, 230.0f / 255));
+            GUILayout.Label($"———————————————————— {titleStr} ————————————————————", textStyle);
+            GUIHelper.PopColor();
+
+            if (BindItemInfos.Count == 0)
+            {
+                if (GUILayout.Button("+", EditorStyles.miniButton))
+                {
+                    AddControlAfter(-1);
+                    GUIHelper.RequestRepaint();
+                    return;
+                }
+            }
+        }
+
+        private void AddControlAfter(int idx)
+        {
+            BindItemInfo itemData = new BindItemInfo();
+            BindItemInfos.Insert(idx + 1, itemData);
+        }
+
+        private void RemoveControl(int idx)
+        {
+            BindItemInfos.RemoveAt(idx);
+        }
 
         public static Dictionary<Type, UIFieldsInfo> s_UIFieldsCache = new Dictionary<Type, UIFieldsInfo>();
 
-        #region Editor
-#if UNITY_EDITOR
-        private static Dictionary<string, Type> _typeMap = new Dictionary<string, Type>()
+
+
+        public static Dictionary<string, Type> _typeMap = new Dictionary<string, Type>()
         {
             // { "UISprite", typeof(UISprite)},
             // { "UILabel", typeof(UILabel)},
@@ -52,8 +95,6 @@ namespace KH.UIBinding
             _typeMap.Values.CopyTo(types, 1);
             return types;
         }
-#endif
-        #endregion
 
         private void Awake()
         {
@@ -152,35 +193,35 @@ namespace KH.UIBinding
             return -1;
         }
 
-        public void BindDataToLua(LuaBehaviourWrapper wrapper)
-        {
-            LuaTable luaTableArgs = CBDefine.GetCoreBridge().RuntimeLua_NewTable();
-            LuaTable luaTable = CBDefine.GetCoreBridge().RuntimeLua_NewTable();
-            for (int i = 0; i < BindItemInfos.Count; i++)
-            {
-                string strArgName = BindItemInfos[i].ItemName;
-                string strTypeName = BindItemInfos[i].ItemType;
-                if (BindItemInfos[i].ItemTargets.Length > 1)
-                {
-                    int len = BindItemInfos[i].ItemTargets.Length;
-                    LuaTable lstArgs = CBDefine.GetCoreBridge().RuntimeLua_NewTable();
-                    luaTable[strArgName] = lstArgs;
-                    for (int j = 0; j < len; j++)
-                    {
-                        lstArgs[j + 1] = BindItemInfos[i].ItemTargets[j];
-                    }
-                    luaTableArgs[strArgName] = strTypeName + "[]";
-                }
-                else
-                {
-                    luaTable[strArgName] = BindItemInfos[i].ItemTargets[0];
-                    luaTableArgs[strArgName] = strTypeName;
-                }
-            }
+        // public void BindDataToLua(LuaBehaviourWrapper wrapper)
+        // {
+        //     LuaTable luaTableArgs = CBDefine.GetCoreBridge().RuntimeLua_NewTable();
+        //     LuaTable luaTable = CBDefine.GetCoreBridge().RuntimeLua_NewTable();
+        //     for (int i = 0; i < BindItemInfos.Count; i++)
+        //     {
+        //         string strArgName = BindItemInfos[i].ItemName;
+        //         string strTypeName = BindItemInfos[i].ItemType;
+        //         if (BindItemInfos[i].ItemTargets.Length > 1)
+        //         {
+        //             int len = BindItemInfos[i].ItemTargets.Length;
+        //             LuaTable lstArgs = CBDefine.GetCoreBridge().RuntimeLua_NewTable();
+        //             luaTable[strArgName] = lstArgs;
+        //             for (int j = 0; j < len; j++)
+        //             {
+        //                 lstArgs[j + 1] = BindItemInfos[i].ItemTargets[j];
+        //             }
+        //             luaTableArgs[strArgName] = strTypeName + "[]";
+        //         }
+        //         else
+        //         {
+        //             luaTable[strArgName] = BindItemInfos[i].ItemTargets[0];
+        //             luaTableArgs[strArgName] = strTypeName;
+        //         }
+        //     }
 
-            wrapper.CallLuaFunction("__SetBindArgsDefine", luaTableArgs);
-            wrapper.CallLuaFunction("__SetBindUISerializeField", luaTable);
-        }
+        //     wrapper.CallLuaFunction("__SetBindArgsDefine", luaTableArgs);
+        //     wrapper.CallLuaFunction("__SetBindUISerializeField", luaTable);
+        // }
 
         #region For Editor
 #if UNITY_EDITOR

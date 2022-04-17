@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 namespace KH.UIBinding
 {
-    public class TestUIComponentBind : UIWindow
+    public class TestUIComponentBind : MonoBehaviour
     {
 
         #region AutoBindUI
