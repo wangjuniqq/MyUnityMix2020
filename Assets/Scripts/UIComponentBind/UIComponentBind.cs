@@ -13,9 +13,8 @@ using UnityEditor;
 
 namespace KH.UIBinding
 {
-    [DisallowMultipleComponent]
-    [HideMonoScript]
-    public class UIComponentBind : MonoBehaviour
+    [DisallowMultipleComponent, ExecuteAlways, HideMonoScript]
+    public class UIComponentBind : MonoBehaviour, IUIMediator
     {
         public List<BindItemInfo> BindItems;
 
@@ -211,7 +210,8 @@ namespace KH.UIBinding
                 {
                     if (objs[j] == null)
                     {
-                        Debug.LogErrorFormat("[{2}]组件变量 [{0}] 绑定对象第 {1} 项为空", BindItems[i].ItemName, j + 1, gameObject.name);
+                        var err_msg = string.Format("[{2}]组件变量 [{0}] 绑定对象第 {1} 项为空", BindItems[i].ItemName, j + 1, gameObject.name);
+                        Debug.LogException(new Exception(err_msg));
                         return false;
                     }
 
@@ -273,12 +273,12 @@ namespace KH.UIBinding
             List<Component> components = new List<Component>();
             go.GetComponents(components);
 
-            Func<string, Component> getSpecialTypeComp = (string typeName) =>
+            Func<string, Component> getSpecialTypeComp = (string _typeName) =>
             {
                 foreach (var comp in components)
                 {
                     Type compType = comp.GetType();
-                    if (compType.Name == typeName)
+                    if (compType.Name == _typeName)
                     {
                         return comp;
                     }
@@ -388,6 +388,8 @@ namespace KH.UIBinding
             PropertiesWindow.ShowWindow(this);
 
         }
+
+
 
 #endif
         #endregion

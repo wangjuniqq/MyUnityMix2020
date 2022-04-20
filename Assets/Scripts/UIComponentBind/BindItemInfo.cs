@@ -12,6 +12,12 @@ namespace KH.UIBinding
         public string ItemType = string.Empty;
         public UnityEngine.Object[] ItemTargets = new UnityEngine.Object[1];
 
+        public override string ToString()
+        {
+            return ItemName;
+        }
+
+        #region  Editor
 #if UNITY_EDITOR
         [HideInInspector]
         public Component TargetCom = null;
@@ -21,10 +27,7 @@ namespace KH.UIBinding
             "GameObject"
         };
 #endif
+        #endregion
 
-        public override string ToString()
-        {
-            return ItemName;
-        }
     }
 }

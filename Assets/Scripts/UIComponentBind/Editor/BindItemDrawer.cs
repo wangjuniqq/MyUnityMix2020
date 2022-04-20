@@ -77,15 +77,11 @@ namespace KH.KHEditor
 
                     if (EditorGUI.EndChangeCheck())
                     {
-                        if (_controlTypeIdx != 0)
+                        if (!ChangeControlsTypeTo(_controlTypeIdx))
                         {
-                            if (!ChangeControlsTypeTo(_controlTypeIdx))
-                                _controlTypeIdx = 0;
+                            _controlTypeIdx = _itemData.AllTypeNames.Length;
                         }
-                        else
-                        {
-                            _itemData.ItemType = string.Empty;
-                        }
+
 
                         return false;
                     }

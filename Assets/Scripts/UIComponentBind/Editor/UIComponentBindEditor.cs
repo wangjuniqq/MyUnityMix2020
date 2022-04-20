@@ -10,8 +10,10 @@ namespace KH.KHEditor
     public class UIComponentBindEditor : OdinEditor
     {
         public static GUISkin skin = null;
+        public static bool isAddListen = false;
 
-        private List<BindItemInfo> _BindItems;
+        private List<BindItemInfo> _BindItems = new List<BindItemInfo>();
+        private static Dictionary<string, UnityEngine.Object> s_CacheItems = new Dictionary<string, Object>();
         private List<BindItemDrawer> _bindItemDrawers;
 
         private Object _activeObj = null;
@@ -29,10 +31,20 @@ namespace KH.KHEditor
 
         void Awake()
         {
+
             if (skin == null)
             {
                 skin = EditorGUIUtility.Load("UIComponentBind/UIComponentBindSkin.guiskin") as GUISkin;
             }
+
+            if (!isAddListen)
+            {
+                // Debug.Log("add listen");
+
+                UnityEditor.EditorApplication.hierarchyWindowItemOnGUI += OnHierarchyWindowItemOnGUI;
+                // isAddListen = true;
+            }
+
         }
 
 
@@ -303,6 +315,59 @@ namespace KH.KHEditor
                 BindItemDrawer drawer = new BindItemDrawer(this, itemData);
                 _bindItemDrawers.Insert(idx + 1, drawer);
             }
+
+        }
+
+        // #if UNITY_EDITOR
+
+        private void OnHierarchyWindowItemOnGUI(int instanceID, Rect selectionRect)
+        {
+            var obj = UnityEditor.EditorUtility.InstanceIDToObject(instanceID) as GameObject;
+            if (obj == null)
+            {
+                return;
+            }
+
+            var data = target as UIComponentBind;
+            if (data == null)
+            {
+                return;
+            }
+
+
+            foreach (var item in data.BindItems)
+            {
+                foreach (var target in item.ItemTargets)
+                {
+                    bool isOk = false;
+                    if (target is GameObject)
+                    {
+                        isOk = target == obj;
+                    }
+                    if (target is Component)
+                    {
+                        isOk = ((target as Component).gameObject == obj);
+                    }
+                    if (isOk)
+                    {
+                        var r = new Rect(selectionRect);
+                        r.x = 34;
+                        r.width = 80;
+                        GUIStyle style = new GUIStyle();
+                        style.normal.textColor = Color.yellow;
+                        style.active.textColor = Color.red;
+                        if (style != null && obj != null)
+                        {
+                            GUI.Label(r, "★", style);
+                        }
+                    }
+
+                }
+            }
+        }
+
+        private void Test()
+        {
 
         }
     }
