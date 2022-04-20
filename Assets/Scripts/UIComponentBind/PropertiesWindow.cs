@@ -1,25 +1,32 @@
 using UnityEngine;
 using UnityEditor;
 
-public class PropertiesWindow : EditorWindow
-{
-    private static Editor m_scriptEditor;
+#region  Editor
+#if UNITY_EDITOR
 
-    //[MenuItem("MyControlBind/PropertiesWindow")]
-    public static void ShowWindow(MonoBehaviour data)
+namespace KH.UIBinding
+{
+    public class PropertiesWindow : EditorWindow
     {
-        if (m_scriptEditor == null || m_scriptEditor.target == null)
+        private static Editor m_scriptEditor;
+        public static void ShowWindow(MonoBehaviour data)
         {
-            m_scriptEditor = Editor.CreateEditor(data);
+            if (m_scriptEditor == null || m_scriptEditor.target == null)
+            {
+                m_scriptEditor = Editor.CreateEditor(data);
+            }
+
+            var window = GetWindow<PropertiesWindow>();
+            window.titleContent = new GUIContent("PropertiesWindow");
+            window.Show();
         }
 
-        var window = GetWindow<PropertiesWindow>();
-        window.titleContent = new GUIContent("PropertiesWindow");
-        window.Show();
-    }
-
-    private void OnGUI()
-    {
-        m_scriptEditor.OnInspectorGUI();
+        private void OnGUI()
+        {
+            m_scriptEditor.OnInspectorGUI();
+        }
     }
 }
+
+#endif
+#endregion

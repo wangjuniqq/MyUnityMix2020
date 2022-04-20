@@ -3,9 +3,33 @@ using Sirenix.OdinInspector;
 using Sirenix.OdinInspector.Editor;
 using Sirenix.Utilities.Editor;
 using UnityEngine;
+using UnityEditor;
 
 public class TestOdin : MonoBehaviour
 {
+    public bool updatePosition;
+    [OnInspectorGUI]
+    private void DrawAreaThing()
+    {
+        Rect rect = new Rect(Vector2.left, new Vector2(200, 100));
+
+        SirenixEditorGUI.DrawBorders(rect, 1);
+
+        if (Event.current.type == EventType.MouseDown && Event.current.button == 0 && rect.Contains(Event.current.mousePosition))
+        {
+            Event.current.Use();
+            this.updatePosition = true;
+        }
+        else if (this.updatePosition && Event.current.rawType == EventType.MouseUp)
+        {
+            this.updatePosition = false;
+        }
+
+        if (this.updatePosition)
+        {
+            // 
+        }
+    }
     //[BoxGroup]
     [OnInspectorGUI("DrawColoredHeader", append: false)]
     public int A;

@@ -1,26 +1,24 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using System.Reflection;
-
-#if UNITY_EDITOR
+﻿using UnityEngine;
 using UnityEditor;
+
+# region Editor
+#if UNITY_EDITOR
 
 namespace KH.UIBinding
 {
-    public class UIComponentBindHelper : UnityEditor.AssetModificationProcessor
+    public class UIBindingHelper : UnityEditor.AssetModificationProcessor
     {
         static string[] OnWillSaveAssets(string[] paths)
         {
             GameObject goInHierarchy = Selection.activeGameObject;
             if (goInHierarchy != null)
             {
-                UIComponentBind[] uiControlData = goInHierarchy.GetComponentsInChildren<UIComponentBind>();
-                if (uiControlData != null)
+                UIComponentBind[] bindData = goInHierarchy.GetComponentsInChildren<UIComponentBind>(true);
+                if (bindData != null)
                 {
-                    foreach (var comp in uiControlData)
+                    foreach (var comp in bindData)
                     {
-                        comp.CorrectComponents();
+                        comp.CheckBinding();
                     }
                 }
             }
@@ -30,14 +28,14 @@ namespace KH.UIBinding
 
         public static void SavePrefab(GameObject goInHierarchy)
         {
-            Object goPrefab = null;
+            GameObject goPrefab = null;
             GameObject objValid = null;
             GameObject objToCheck = goInHierarchy;
             string prefabPath = null;
 
             do
             {
-                var curPrefab = PrefabUtility.GetPrefabParent(objToCheck);
+                var curPrefab = PrefabUtility.GetCorrespondingObjectFromSource(objToCheck);
                 if (curPrefab == null)
                 {
                     break;
@@ -72,7 +70,9 @@ namespace KH.UIBinding
 
             if (objValid != null)
             {
+#pragma warning disable 618
                 PrefabUtility.ReplacePrefab(goInHierarchy, goPrefab, ReplacePrefabOptions.ConnectToPrefab);
+#pragma warning restore 618
             }
             else
             {
@@ -84,3 +84,4 @@ namespace KH.UIBinding
 
 }
 #endif
+#endregion

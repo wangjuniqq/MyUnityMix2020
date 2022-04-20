@@ -1,14 +1,11 @@
-﻿using System.Linq;
-using System;
-using System.Collections.Generic;
-using System.Reflection;
+﻿using System;
 using UnityEngine;
 using System.Text;
-// using LuaInterface;
 // using KH.Lua;
+// using LuaInterface;
+using System.Reflection;
+using System.Collections.Generic;
 using Sirenix.OdinInspector;
-using Sirenix.Serialization;
-using Sirenix.Utilities.Editor;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -20,81 +17,10 @@ namespace KH.UIBinding
     [HideMonoScript]
     public class UIComponentBind : MonoBehaviour
     {
-        [OnInspectorGUI("DrawSeperateLine", append: false)]
-        // [ListDrawerSettings(DraggableItems = false, Expanded = true)]
-        // [HideLabel]
-        public List<BindItemInfo> BindItemInfos;
-        private void DrawSeperateLine()
-        {
-            string titleStr = "Component Area";
-            GUIStyle textStyle = new GUIStyle("HeaderLabel")
-            {
-                fontSize = 14,
-                alignment = TextAnchor.MiddleCenter,
-                fontStyle = FontStyle.Bold,
-            };
+        public List<BindItemInfo> BindItems;
 
-            GUIHelper.PushColor(new Color(173.0f / 255, 216.0f / 255, 230.0f / 255));
-            GUILayout.Label($"———————————————————— {titleStr} ————————————————————", textStyle);
-            GUIHelper.PopColor();
-
-            if (BindItemInfos.Count == 0)
-            {
-                if (GUILayout.Button("+", EditorStyles.miniButton))
-                {
-                    AddControlAfter(-1);
-                    GUIHelper.RequestRepaint();
-                    return;
-                }
-            }
-        }
-
-        private void AddControlAfter(int idx)
-        {
-            BindItemInfo itemData = new BindItemInfo();
-            BindItemInfos.Insert(idx + 1, itemData);
-        }
-
-        private void RemoveControl(int idx)
-        {
-            BindItemInfos.RemoveAt(idx);
-        }
-
+        #region  BindData
         public static Dictionary<Type, UIFieldsInfo> s_UIFieldsCache = new Dictionary<Type, UIFieldsInfo>();
-
-
-
-        public static Dictionary<string, Type> _typeMap = new Dictionary<string, Type>()
-        {
-            // { "UISprite", typeof(UISprite)},
-            // { "UILabel", typeof(UILabel)},
-            // { "UIButton", typeof(UIButton)},
-            // { "UIToggle", typeof(UIToggle)},
-
-            // {"KH.LuaBehaviourWrapper", typeof(KH.Lua.LuaBehaviourWrapper) },
-
-            // {"KH.UIScrollViewController", typeof(KH.UIScrollViewController)},
-            // {"KH.UIGridController", typeof(KH.UIGridController) },
-
-            { "Transform", typeof(Transform)},
-            { "GameObject", typeof(GameObject)},
-        };
-
-        public static string[] GetAllTypeNames()
-        {
-            string[] keys = new string[_typeMap.Count + 1];
-            keys[0] = "自动";
-            _typeMap.Keys.CopyTo(keys, 1);
-            return keys;
-        }
-
-        public static Type[] GetAllTypes()
-        {
-            Type[] types = new Type[_typeMap.Count + 1];
-            types[0] = typeof(UnityEngine.Object);
-            _typeMap.Values.CopyTo(types, 1);
-            return types;
-        }
 
         private void Awake()
         {
@@ -144,7 +70,7 @@ namespace KH.UIBinding
         private void BindComponentToMono(MonoBehaviour mono, FieldInfo fi)
         {
             int itemIdx = GetBindComponentIndex(fi.Name);
-            var objs = BindItemInfos[itemIdx];
+            var objs = BindItems[itemIdx];
 
             Type fieldType = fi.FieldType;
             if (fieldType.IsArray)
@@ -172,24 +98,31 @@ namespace KH.UIBinding
 
         private UnityEngine.Object GetBindComponent(int idx)
         {
-            if (idx == -1 || idx >= BindItemInfos.Count)
+            if (idx == -1 || idx >= BindItems.Count)
+            {
                 return null;
+            }
 
-            var targets = BindItemInfos[idx].ItemTargets;
+            var targets = BindItems[idx].ItemTargets;
             if (targets.Length == 0)
+            {
                 return null;
+            }
 
             return targets[0];
         }
 
         private int GetBindComponentIndex(string name)
         {
-            for (int i = 0, imax = BindItemInfos.Count; i < imax; i++)
+            for (int i = 0, imax = BindItems.Count; i < imax; i++)
             {
-                BindItemInfo item = BindItemInfos[i];
+                BindItemInfo item = BindItems[i];
                 if (item.ItemName == name)
+                {
                     return i;
+                }
             }
+
             return -1;
         }
 
@@ -222,125 +155,130 @@ namespace KH.UIBinding
         //     wrapper.CallLuaFunction("__SetBindArgsDefine", luaTableArgs);
         //     wrapper.CallLuaFunction("__SetBindUISerializeField", luaTable);
         // }
+        #endregion
 
-        #region For Editor
+        #region Editor
 #if UNITY_EDITOR
-
-        public bool CorrectComponents()
+        public bool CheckBinding()
         {
             bool isOK = true;
-            for (int i = 0, imax = BindItemInfos.Count; i < imax; i++)
+            if (!CheckBindingName())
             {
-                if (string.IsNullOrEmpty(BindItemInfos[i].ItemName))
-                {
-                    Debug.LogErrorFormat("[{1}]第 {0} 个组件变量名不能为空, 请修正", i + 1, gameObject.name);
-                    return false;
-                }
-
-                for (int j = BindItemInfos.Count - 1; j >= 0; j--)
-                {
-                    if (BindItemInfos[i].ItemName == BindItemInfos[j].ItemName && i != j)
-                    {
-                        Debug.LogErrorFormat("[{3}]组件变量名字 [{0}] 第 {1} 项与第 {2} 项重复, 请修正", BindItemInfos[i].ItemName, i + 1, j + 1, gameObject.name);
-                        return false;
-                    }
-                }
+                return false;
             }
 
-            isOK = ReplaceTargetsToUIComponent();
+            isOK = CheckBindingTarget();
             if (isOK)
             {
-                Debug.LogFormat("[{0}]组件绑定完成", gameObject.name);
+                Debug.LogFormat("[{0}]绑定完成", gameObject.name);
             }
 
             return isOK;
         }
 
-        private bool ReplaceTargetsToUIComponent()
+        private bool CheckBindingName()
         {
-            for (int i = 0, imax = BindItemInfos.Count; i < imax; i++)
+            bool isOK = true;
+            for (int i = 0; i < BindItems.Count; i++)
             {
-                var objs = BindItemInfos[i].ItemTargets;
+                if (string.IsNullOrEmpty(BindItems[i].ItemName))
+                {
+                    Debug.LogErrorFormat("[{1}]第 {0} 个组件变量名为空", i + 1, gameObject.name);
+                    return false;
+                }
+
+                for (int j = BindItems.Count - 1; j >= 0; j--)
+                {
+                    if (BindItems[i].ItemName == BindItems[j].ItemName && i != j)
+                    {
+                        Debug.LogErrorFormat("[{3}]组件变量名字重复 [{0}]: 第 {1} 项与第 {2} 项", BindItems[i].ItemName, i + 1, j + 1, gameObject.name);
+                        return false;
+                    }
+                }
+            }
+
+            return isOK;
+        }
+
+        private bool CheckBindingTarget()
+        {
+            for (int i = 0; i < BindItems.Count; i++)
+            {
+                var objs = BindItems[i].ItemTargets;
                 Type type = null;
-                for (int j = 0, jmax = objs.Length; j < jmax; j++)
+
+                for (int j = 0; j < objs.Length; j++)
                 {
                     if (objs[j] == null)
                     {
-                        Debug.LogErrorFormat("[{2}]组件变量名字 [{0}] 第 {1} 项为空，请修正", BindItemInfos[i].ItemName, j + 1, gameObject.name);
+                        Debug.LogErrorFormat("[{2}]组件变量 [{0}] 绑定对象第 {1} 项为空", BindItems[i].ItemName, j + 1, gameObject.name);
                         return false;
                     }
 
                     GameObject go = objs[j] as GameObject;
                     if (go == null)
-                        go = (objs[j] as Component).gameObject;
-
-                    if (!IsInCurrentPrefab(go.transform))
                     {
-                        Debug.LogErrorFormat("[{2}]组件变量名字 [{0}] 第 {1} 项不是当前 Prefab 下的组件变量，请修正", BindItemInfos[i].ItemName, j + 1, gameObject.name);
+                        go = (objs[j] as Component).gameObject;
+                    }
+
+                    if (!IsPartOfCurPrefab(go.transform))
+                    {
+                        Debug.LogErrorFormat("[{2}]组件变量 [{0}] 第 {1} 项不是当前 Prefab 下的组件", BindItems[i].ItemName, j + 1, gameObject.name);
                         return false;
                     }
 
-                    UnityEngine.Object correctComponent = FindCorrectComponent(go, BindItemInfos[i].ItemType);
+                    UnityEngine.Object correctComponent = FindCorrectComponent(go, BindItems[i].ItemType);
                     if (correctComponent == null)
                     {
-                        Debug.LogErrorFormat("[{3}]组件变量 [{0}] 第 {1} 项不是 {2} 类型，请修正", BindItemInfos[i].ItemName, j + 1, BindItemInfos[i].ItemType, gameObject.name);
+                        Debug.LogErrorFormat("[{3}]组件变量 [{0}] 第 {1} 项不是 {2} 类型", BindItems[i].ItemName, j + 1, BindItems[i].ItemType, gameObject.name);
                         return false;
                     }
 
                     if (type == null)
                     {
-                        if (string.IsNullOrEmpty(BindItemInfos[i].ItemType))
-                        {
-                            type = correctComponent.GetType();
-                        }
-                        else
-                        {
-                            if (!_typeMap.TryGetValue(BindItemInfos[i].ItemType, out type))
-                            {
-                                Debug.LogError("Internal Error, pls contact author");
-                                return false;
-                            }
-                        }
-                    }
-                    else if (correctComponent.GetType() != type && !correctComponent.GetType().IsSubclassOf(type))
-                    {
-                        Debug.LogErrorFormat("[{2}]组件变量名字 [{0}] 第 {1} 项与第 1 项的类型不同，请修正", BindItemInfos[i].ItemName, j + 1, gameObject.name);
-                        return false;
+                        type = correctComponent.GetType();
                     }
 
                     objs[j] = correctComponent;
                 }
 
-                BindItemInfos[i].ItemType = type.Name;
+                BindItems[i].ItemType = type.Name;
             }
             return true;
         }
 
-        private bool IsInCurrentPrefab(Transform t)
+        public bool IsPartOfCurPrefab(Transform t)
         {
             do
             {
                 if (t == transform)
+                {
                     return true;
+                }
+
                 t = t.parent;
-            } while (t != null);
+            }
+            while (t != null);
+
             return false;
         }
 
-        private UnityEngine.Object FindCorrectComponent(GameObject go, string typename)
+        private UnityEngine.Object FindCorrectComponent(GameObject go, string typeName)
         {
-            if (typename == "GameObject")
+            if (typeName == "GameObject")
+            {
                 return go;
+            }
 
             List<Component> components = new List<Component>();
             go.GetComponents(components);
 
-            Func<Type, Component> getSpecialTypeComp = (Type t) =>
+            Func<string, Component> getSpecialTypeComp = (string typeName) =>
             {
                 foreach (var comp in components)
                 {
                     Type compType = comp.GetType();
-                    if (compType == t || compType.IsSubclassOf(t))
+                    if (compType.Name == typeName)
                     {
                         return comp;
                     }
@@ -348,34 +286,14 @@ namespace KH.UIBinding
                 return null;
             };
 
-            Component newComp = null;
-
-            if (string.IsNullOrEmpty(typename))
-            {
-                foreach (var kv in _typeMap)
-                {
-                    newComp = getSpecialTypeComp(kv.Value);
-                    if (newComp != null)
-                    {
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                Type type = null;
-                if (_typeMap.TryGetValue(typename, out type))
-                {
-                    newComp = getSpecialTypeComp(type);
-                }
-            }
+            Component newComp = getSpecialTypeComp(typeName);
 
             return newComp;
         }
 
         private bool IsNeedSave()
         {
-            foreach (var ctrl in BindItemInfos)
+            foreach (var ctrl in BindItems)
             {
                 if (string.IsNullOrEmpty(ctrl.ItemType))
                 {
@@ -383,12 +301,6 @@ namespace KH.UIBinding
                 }
             }
             return false;
-        }
-
-        [ContextMenu("ShowPropertiesWindow(Lua)")]
-        public void ShowPropertiesWindow()
-        {
-            PropertiesWindow.ShowWindow(this);
         }
 
         [ContextMenu("Copy Code (C#)")]
@@ -410,20 +322,28 @@ namespace KH.UIBinding
         private void CopyCodeToClipBoardImpl(string accessLevel)
         {
             if (IsNeedSave())
-                UIComponentBindHelper.SavePrefab(gameObject);
+            {
+                UIBindingHelper.SavePrefab(gameObject);
+            }
 
             StringBuilder sb = new StringBuilder(1024);
             sb.AppendLine("#region AutoBindUI");
 
-            foreach (var ctrl in BindItemInfos)
+            foreach (var ctrl in BindItems)
             {
                 if (ctrl.ItemTargets.Length == 0)
+                {
                     continue;
+                }
 
                 if (ctrl.ItemTargets.Length == 1)
+                {
                     sb.AppendFormat("\t\t[UIComponentBinding]\r\n\t\t{0} {1} {2};\r\n", accessLevel, ctrl.ItemType, ctrl.ItemName);
+                }
                 else
+                {
                     sb.AppendFormat("\t\t[UIComponentBinding]\r\n\t\t{0} {1}[] {2};\r\n", accessLevel, ctrl.ItemType, ctrl.ItemName);
+                }
             }
             sb.Append("#endregion\r\n\r\n");
 
@@ -435,16 +355,18 @@ namespace KH.UIBinding
         {
             if (IsNeedSave())
             {
-                UIComponentBindHelper.SavePrefab(gameObject);
+                UIBindingHelper.SavePrefab(gameObject);
             }
 
             StringBuilder sb = new StringBuilder(1024);
             sb.Append("-- AutoBindUI Begin\r\n");
 
-            foreach (var ctrl in BindItemInfos)
+            foreach (var ctrl in BindItems)
             {
                 if (ctrl.ItemTargets.Length == 0)
+                {
                     continue;
+                }
 
                 if (ctrl.ItemTargets.Length == 1)
                 {
@@ -455,11 +377,18 @@ namespace KH.UIBinding
                     sb.AppendFormat("\t--__protected.{0} type:{1}[]\r\n", ctrl.ItemName, ctrl.ItemType);
                 }
             }
-
             sb.Append("\t-- AutoBindUI End\r\n\r\n");
 
             GUIUtility.systemCopyBuffer = sb.ToString();
         }
+
+        [ContextMenu("ShowPropertiesWindow")]
+        public void ShowPropertiesWindow()
+        {
+            PropertiesWindow.ShowWindow(this);
+
+        }
+
 #endif
         #endregion
     }
