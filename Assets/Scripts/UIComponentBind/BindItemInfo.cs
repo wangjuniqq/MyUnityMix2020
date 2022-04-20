@@ -16,10 +16,9 @@ namespace KH.UIBinding
         [HideInInspector]
         public Component TargetCom = null;
         [HideInInspector]
-        public string[] AllTypeNames = new string[2]
+        public string[] AllTypeNames = new string[]
         {
-            "GameObject",
-            "Transform",
+            "GameObject"
         };
 #endif
 

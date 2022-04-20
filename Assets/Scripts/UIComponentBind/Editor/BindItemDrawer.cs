@@ -96,14 +96,32 @@ namespace KH.KHEditor
 
 
 
-
-
                 EditorGUILayout.Space();
                 for (int i = 0, imax = _itemData.ItemTargets.Length; i < imax; i++)
                 {
                     UnityEngine.Object obj = _itemData.ItemTargets[i];
                     EditorGUILayout.BeginHorizontal();
+                    EditorGUI.BeginChangeCheck();
                     _itemData.ItemTargets[i] = EditorGUILayout.ObjectField(obj, typeof(UnityEngine.Object), true);
+                    if (EditorGUI.EndChangeCheck())
+                    {
+                        var objTemp = _itemData.ItemTargets[i];
+                        if (objTemp is GameObject)
+                        {
+                            var go = objTemp as GameObject;
+                            _itemData.ItemName = go.name;
+                            _itemData.ItemType = "GameObject";
+                            var names = go.GetComponents<Component>();
+                            var tempType = new string[names.Length + 1];
+                            tempType[names.Length] = "GameObject";
+                            for (int j = 0; j < names.Length; j++)
+                            {
+                                tempType[j] = names[j].GetType().Name;
+                            }
+                            _itemData.AllTypeNames = tempType;
+                            _controlTypeIdx = names.Length;
+                        }
+                    }
 
                     EditorGUILayout.Space();
                     EditorGUILayout.Space();

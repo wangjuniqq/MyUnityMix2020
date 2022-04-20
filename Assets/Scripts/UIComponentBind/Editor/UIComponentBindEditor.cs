@@ -102,6 +102,8 @@ namespace KH.KHEditor
                     isOk = index > -2;
                     if (!isOk)
                     {
+                        _activeObj = null;
+                        _typeRects = new Rect[0];
                         break;
                     }
 
