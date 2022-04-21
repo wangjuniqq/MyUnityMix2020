@@ -1,8 +1,8 @@
 ﻿using UnityEngine;
 using UnityEditor;
+using KH.UIBinding;
 using System.Collections.Generic;
 using Sirenix.OdinInspector.Editor;
-using KH.UIBinding;
 
 namespace KH.KHEditor
 {
@@ -10,28 +10,22 @@ namespace KH.KHEditor
     public class UIComponentBindEditor : OdinEditor
     {
         public static GUISkin skin = null;
-        public static bool isAddListen = false;
 
-        private List<BindItemInfo> _BindItems = new List<BindItemInfo>();
-        private static Dictionary<string, UnityEngine.Object> s_CacheItems = new Dictionary<string, Object>();
+        private static bool isAddListen = false;
+        private UIComponentBind _targetData;
+        private List<BindItemInfo> _BindItems;
         private List<BindItemDrawer> _bindItemDrawers;
 
+        private Rect _dragArea = new Rect();
         private Object _activeObj = null;
         private Object[] _activeObjComs = null;
-
-        private Rect _dragArea = new Rect();
         private Rect[] _typeRects = null;
         private string[] _typeNames = null;
         private Object curSelectCom = null;
-        private string curSelectComName = string.Empty;
-
-        private const string DRAG_ID = "SceneDragAndDrop";
-        private string title = "MyDrag";
-        public UIComponentBind data;
+        private string _curSelectComName = string.Empty;
 
         void Awake()
         {
-
             if (skin == null)
             {
                 skin = EditorGUIUtility.Load("UIComponentBind/UIComponentBindSkin.guiskin") as GUISkin;
@@ -39,14 +33,10 @@ namespace KH.KHEditor
 
             if (!isAddListen)
             {
-                // Debug.Log("add listen");
-
-                UnityEditor.EditorApplication.hierarchyWindowItemOnGUI += OnHierarchyWindowItemOnGUI;
+                EditorApplication.hierarchyWindowItemOnGUI += OnHierarchyWindowItemOnGUI;
                 // isAddListen = true;
             }
-
         }
-
 
         public override void OnInspectorGUI()
         {
@@ -56,17 +46,18 @@ namespace KH.KHEditor
                 return;
             }
 
-            data = target as UIComponentBind;
-            if (data.BindItems == null)
+            _targetData = target as UIComponentBind;
+            if (_targetData.BindItems == null)
             {
-                data.BindItems = new List<BindItemInfo>();
+                _targetData.BindItems = new List<BindItemInfo>();
             }
-            _BindItems = data.BindItems;
+            _BindItems = _targetData.BindItems;
 
             OnDropAreaGUI();
 
             CheckDrawers();
 
+            #region Draw Items
             EditorGUILayout.BeginVertical();
             EditorGUILayout.Space();
 
@@ -83,11 +74,10 @@ namespace KH.KHEditor
                 }
                 GUILayout.Space(10f);
             }
-            GUILayout.Space(10f);
 
             EditorGUILayout.Space();
-            EditorGUILayout.Space();
             EditorGUILayout.EndVertical();
+            #endregion
 
             if (GUI.changed)
             {
@@ -119,30 +109,35 @@ namespace KH.KHEditor
                         break;
                     }
 
+                    if (index == -1)
+                    {
+                        _curSelectComName = "GameObject";
+                        if (DragAndDrop.objectReferences.Length > 0)
+                        {
+                            curSelectCom = DragAndDrop.objectReferences[0];
+                        }
+                    }
+
+                    if (index >= 0)
+                    {
+                        _curSelectComName = this._typeNames[index];
+                        curSelectCom = this._activeObjComs[index];
+                    }
 
                     DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
 
                     if (DragAndDrop.objectReferences.Length > 0)
                     {
                         var obj = DragAndDrop.objectReferences[0];
-                        if (obj is GameObject && data.IsPartOfCurPrefab((obj as GameObject).transform))
+                        if (obj is GameObject)
                         {
-                            this._activeObj = obj;
+                            var go = obj as GameObject;
+                            if (_targetData.IsPartOfCurPrefab(go.transform))
+                            {
+                                this._activeObj = go;
+                            }
                         }
                     }
-
-                    if (index == -1)
-                    {
-                        curSelectComName = "GameObject";
-                        if (DragAndDrop.objectReferences.Length > 0)
-                            curSelectCom = DragAndDrop.objectReferences[0];
-                    }
-                    if (index >= 0)
-                    {
-                        curSelectComName = this._typeNames[index];
-                        curSelectCom = this._activeObjComs[index];
-                    }
-
 
                     if (evt.type == EventType.DragPerform)
                     {
@@ -150,7 +145,7 @@ namespace KH.KHEditor
 
                         if (_activeObj != null)
                         {
-                            AddNew(_activeObj, -1, curSelectComName, curSelectCom);
+                            AddItemDragAndDrop(_activeObj, -1, _curSelectComName, curSelectCom);
                         }
                     }
 
@@ -173,45 +168,51 @@ namespace KH.KHEditor
 
         private void DrawType()
         {
-            if (_activeObj != null)
+            if (_activeObj == null)
             {
-                GUILayout.BeginVertical();
-                GameObject go = _activeObj as GameObject;
-                if (go == null)
-                {
-                    _activeObj = null;
-                    return;
-                }
-                var types = go.GetComponents<Component>();
-
-                _typeNames = new string[types.Length + 1];
-                _typeNames[_typeNames.Length - 1] = "GameObject";
-
-                _activeObjComs = new Object[types.Length + 1];
-                _activeObjComs[_typeNames.Length - 1] = (_activeObj as GameObject).GetComponent<GameObject>();
-
-
-                for (var i = 0; i < _typeNames.Length - 1; i++)
-                {
-                    _typeNames[i] = types[i].GetType().Name;
-                    _activeObjComs[i] = types[i];
-                }
-
-                _typeRects = new Rect[_typeNames.Length];
-                for (var i = 0; i < _typeNames.Length; i++)
-                {
-                    var r = GUILayoutUtility.GetRect(GUIContent.none, GUIStyle.none, GUILayout.Height(30));
-                    _typeRects[i] = r;
-                    GUI.color = r.Contains(Event.current.mousePosition) ? Color.green : Color.white;
-
-                    GUI.Box(r, _typeNames[i]);
-                    if (GUI.changed)
-                    {
-                        Repaint();
-                    }
-                }
-                GUILayout.EndVertical();
+                return;
             }
+
+            GameObject go = _activeObj as GameObject;
+            if (go == null)
+            {
+                _activeObj = null;
+                return;
+            }
+
+            var comps = go.GetComponents<Component>();
+
+            _typeNames = new string[comps.Length + 1];
+            _typeNames[_typeNames.Length - 1] = "GameObject";
+
+            _activeObjComs = new Object[comps.Length + 1];
+            _activeObjComs[_activeObjComs.Length - 1] = go.GetComponent<GameObject>();
+
+            for (var i = 0; i < _typeNames.Length - 1; i++)
+            {
+                _typeNames[i] = comps[i].GetType().Name;
+                _activeObjComs[i] = comps[i];
+            }
+
+            _typeRects = new Rect[_typeNames.Length];
+
+            GUILayout.BeginVertical();
+
+            for (var i = 0; i < _typeNames.Length; i++)
+            {
+                var r = GUILayoutUtility.GetRect(GUIContent.none, GUIStyle.none, GUILayout.Height(30));
+                _typeRects[i] = r;
+                GUI.color = r.Contains(Event.current.mousePosition) ? Color.green : Color.white;
+
+                GUI.Box(r, _typeNames[i]);
+
+                if (GUI.changed)
+                {
+                    Repaint();
+                }
+            }
+
+            GUILayout.EndVertical();
         }
 
         private int GetCurRectIndex(Vector2 pos)
@@ -239,28 +240,11 @@ namespace KH.KHEditor
             return index;
         }
 
-        public void AddControlAfter(BindItemDrawer drawer)
-        {
-            int idx = _bindItemDrawers.IndexOf(drawer);
-            Debug.Assert(idx != -1);
-
-            AddControlAfter(idx);
-        }
-
-
-        public void RemoveControl(BindItemDrawer drawer)
-        {
-            int idx = _bindItemDrawers.IndexOf(drawer);
-            Debug.Assert(idx != -1);
-
-            RemoveControl(idx);
-        }
-
         private void CheckDrawers()
         {
             if (_bindItemDrawers == null)
             {
-                _bindItemDrawers = new List<BindItemDrawer>(100);
+                _bindItemDrawers = new List<BindItemDrawer>(50);
                 foreach (var item in _BindItems)
                 {
                     BindItemDrawer drawer = new BindItemDrawer(this, item);
@@ -269,61 +253,15 @@ namespace KH.KHEditor
             }
         }
 
-        private void AddControlAfter(int idx)
-        {
-            BindItemInfo itemData = new BindItemInfo();
-            _BindItems.Insert(idx + 1, itemData);
-
-            BindItemDrawer drawer = new BindItemDrawer(this, itemData);
-            _bindItemDrawers.Insert(idx + 1, drawer);
-        }
-
-        private void RemoveControl(int idx)
-        {
-            _BindItems.RemoveAt(idx);
-            _bindItemDrawers.RemoveAt(idx);
-        }
-
-        private void AddNew(Object obj, int idx, string curSelectTypeName, Object mono)
-        {
-            BindItemInfo itemData = new BindItemInfo();
-            if (obj is GameObject && data.IsPartOfCurPrefab((obj as GameObject).transform))
-            {
-
-                var types = (obj as GameObject).GetComponents<Component>();
-                string[] typeNames = new string[types.Length + 1];
-                typeNames[typeNames.Length - 1] = "GameObject";
-                for (var i = 0; i < typeNames.Length - 1; i++)
-                {
-                    typeNames[i] = types[i].GetType().Name;
-                }
-                itemData.AllTypeNames = typeNames;
-                itemData.ItemType = curSelectTypeName;
-                itemData.TargetCom = (mono as Component);
-                if (curSelectTypeName == "GameObject")
-                {
-                    itemData.ItemTargets[0] = obj as GameObject;
-                }
-                else
-                {
-                    itemData.ItemTargets[0] = itemData.TargetCom;
-                }
-
-
-                _BindItems.Insert(idx + 1, itemData);
-
-                BindItemDrawer drawer = new BindItemDrawer(this, itemData);
-                _bindItemDrawers.Insert(idx + 1, drawer);
-            }
-
-        }
-
-        // #if UNITY_EDITOR
-
         private void OnHierarchyWindowItemOnGUI(int instanceID, Rect selectionRect)
         {
-            var obj = UnityEditor.EditorUtility.InstanceIDToObject(instanceID) as GameObject;
+            var obj = EditorUtility.InstanceIDToObject(instanceID) as GameObject;
             if (obj == null)
+            {
+                return;
+            }
+
+            if (target == null)
             {
                 return;
             }
@@ -334,42 +272,124 @@ namespace KH.KHEditor
                 return;
             }
 
-
             foreach (var item in data.BindItems)
             {
                 foreach (var target in item.ItemTargets)
                 {
                     bool isOk = false;
+
                     if (target is GameObject)
                     {
-                        isOk = target == obj;
+                        isOk = (target == obj);
                     }
+
                     if (target is Component)
                     {
-                        isOk = ((target as Component).gameObject == obj);
+                        var com = target as Component;
+                        isOk = (com.gameObject == obj);
                     }
+
                     if (isOk)
                     {
                         var r = new Rect(selectionRect);
-                        r.x = 34;
-                        r.width = 80;
+                        r.x = 35;
+                        r.width = 75;
                         GUIStyle style = new GUIStyle();
                         style.normal.textColor = Color.yellow;
-                        style.active.textColor = Color.red;
                         if (style != null && obj != null)
                         {
                             GUI.Label(r, "★", style);
                         }
                     }
-
                 }
             }
         }
 
-        private void Test()
+        private bool CheckObj(Object obj)
         {
+            bool result = false;
+            if (obj is GameObject)
+            {
+                var go = obj as GameObject;
+                if (_targetData != null)
+                {
+                    if (_targetData.IsPartOfCurPrefab(go.transform))
+                    {
+                        result = true;
+                    }
+                }
+            }
+            return result;
+        }
 
+        private void AddItemDragAndDrop(Object obj, int idx, string name, Object com)
+        {
+            if (!CheckObj(obj))
+            {
+                return;
+            }
+
+            BindItemInfo itemData = new BindItemInfo();
+
+            var go = obj as GameObject;
+            var comps = go.GetComponents<Component>();
+
+            string[] typeNames = new string[comps.Length + 1];
+            typeNames[typeNames.Length - 1] = "GameObject";
+
+            for (var i = 0; i < typeNames.Length - 1; i++)
+            {
+                typeNames[i] = comps[i].GetType().Name;
+            }
+
+            itemData.AllTypeNames = typeNames;
+            itemData.ItemType = name;
+            itemData.TargetCom = (com as Component);
+
+            if (name == "GameObject")
+            {
+                itemData.ItemTargets[0] = go;
+            }
+            else
+            {
+                itemData.ItemTargets[0] = itemData.TargetCom;
+            }
+
+            _BindItems.Insert(idx + 1, itemData);
+
+            BindItemDrawer drawer = new BindItemDrawer(this, itemData);
+            _bindItemDrawers.Insert(idx + 1, drawer);
+        }
+
+        public void AddItem(BindItemDrawer drawer)
+        {
+            int idx = _bindItemDrawers.IndexOf(drawer);
+            Debug.Assert(idx != -1);
+
+            AddItemByIndex(idx);
+        }
+
+        public void RemoveItem(BindItemDrawer drawer)
+        {
+            int idx = _bindItemDrawers.IndexOf(drawer);
+            Debug.Assert(idx != -1);
+
+            RemoveItemByIndex(idx);
+        }
+
+        private void AddItemByIndex(int idx)
+        {
+            BindItemInfo itemData = new BindItemInfo();
+            _BindItems.Insert(idx + 1, itemData);
+
+            BindItemDrawer drawer = new BindItemDrawer(this, itemData);
+            _bindItemDrawers.Insert(idx + 1, drawer);
+        }
+
+        private void RemoveItemByIndex(int idx)
+        {
+            _BindItems.RemoveAt(idx);
+            _bindItemDrawers.RemoveAt(idx);
         }
     }
-
 }
