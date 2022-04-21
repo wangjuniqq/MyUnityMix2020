@@ -13,7 +13,7 @@ using UnityEditor;
 
 namespace KH.UIBinding
 {
-    [DisallowMultipleComponent, ExecuteAlways, HideMonoScript]
+    [DisallowMultipleComponent, HideMonoScript]
     public class UIComponentBind : MonoBehaviour, IUIMediator
     {
         public List<BindItemInfo> BindItems;

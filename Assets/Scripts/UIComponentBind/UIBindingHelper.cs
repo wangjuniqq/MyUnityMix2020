@@ -28,14 +28,15 @@ namespace KH.UIBinding
 
         public static void SavePrefab(GameObject goInHierarchy)
         {
-            GameObject goPrefab = null;
+            Object goPrefab = null;
             GameObject objValid = null;
             GameObject objToCheck = goInHierarchy;
             string prefabPath = null;
 
             do
             {
-                var curPrefab = PrefabUtility.GetCorrespondingObjectFromSource(objToCheck);
+#pragma warning disable 618
+                var curPrefab = PrefabUtility.GetPrefabParent(objToCheck);
                 if (curPrefab == null)
                 {
                     break;
@@ -70,9 +71,7 @@ namespace KH.UIBinding
 
             if (objValid != null)
             {
-#pragma warning disable 618
                 PrefabUtility.ReplacePrefab(goInHierarchy, goPrefab, ReplacePrefabOptions.ConnectToPrefab);
-#pragma warning restore 618
             }
             else
             {
