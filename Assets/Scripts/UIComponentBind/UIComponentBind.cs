@@ -23,6 +23,21 @@ namespace KH.UIBinding
 
         private void Awake()
         {
+            AwakePostProcess();
+
+            // DateTime before = DateTime.Now;
+            // for (int i = 0; i < 1000; i++)
+            // {
+            //     AwakePostProcess();
+            // }
+
+            // DateTime after = DateTime.Now;
+            // TimeSpan duration = after.Subtract(before);
+            // Debug.LogError("Duration in milliseconds: " + duration.Milliseconds);
+        }
+
+        private void AwakePostProcess()
+        {
             var monos = gameObject.GetComponents<MonoBehaviour>();
             foreach (var mono in monos)
             {
