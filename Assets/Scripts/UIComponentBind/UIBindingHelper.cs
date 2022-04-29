@@ -1,31 +1,15 @@
 ﻿using UnityEngine;
 using UnityEditor;
+using System;
+using Object = UnityEngine.Object;
 
 # region Editor
 #if UNITY_EDITOR
 
 namespace KH.UIBinding
 {
-    public class UIBindingHelper : UnityEditor.AssetModificationProcessor
+    public class UIBindingHelper
     {
-        static string[] OnWillSaveAssets(string[] paths)
-        {
-            GameObject goInHierarchy = Selection.activeGameObject;
-            if (goInHierarchy != null)
-            {
-                UIComponentBind[] bindData = goInHierarchy.GetComponentsInChildren<UIComponentBind>(true);
-                if (bindData != null)
-                {
-                    foreach (var comp in bindData)
-                    {
-                        comp.CheckBinding();
-                    }
-                }
-            }
-
-            return paths;
-        }
-
         public static void SavePrefab(GameObject goInHierarchy)
         {
             Object goPrefab = null;
@@ -36,13 +20,13 @@ namespace KH.UIBinding
             do
             {
 #pragma warning disable 618
-                var curPrefab = PrefabUtility.GetPrefabParent(objToCheck);
+                var curPrefab = UnityEditor.PrefabUtility.GetPrefabParent(objToCheck);
                 if (curPrefab == null)
                 {
                     break;
                 }
 
-                string curPath = AssetDatabase.GetAssetPath(curPrefab);
+                string curPath = UnityEditor.AssetDatabase.GetAssetPath(curPrefab);
                 if (prefabPath == null)
                 {
                     prefabPath = curPath;
@@ -71,7 +55,7 @@ namespace KH.UIBinding
 
             if (objValid != null)
             {
-                PrefabUtility.ReplacePrefab(goInHierarchy, goPrefab, ReplacePrefabOptions.ConnectToPrefab);
+                UnityEditor.PrefabUtility.ReplacePrefab(goInHierarchy, goPrefab, UnityEditor.ReplacePrefabOptions.ConnectToPrefab);
             }
             else
             {
@@ -79,7 +63,16 @@ namespace KH.UIBinding
             }
 
         }
+
+        public static string GetCodeVarName(string itemName, string itemType, bool isArray)
+        {
+            return "";
+        }
+
+
     }
+
+
 
 }
 #endif
