@@ -1,0 +1,6 @@
+G:\UnityProject\MyUnityMix2020\Assets\Samples\ILRuntime\2.0.2\Demo\HotFix_Project~\obj\Debug\HotFix_Project.csprojAssemblyReference.cache
+G:\UnityProject\MyUnityMix2020\Assets\Samples\ILRuntime\2.0.2\Demo\HotFix_Project~\obj\Debug\HotFix_Project.csproj.CoreCompileInputs.cache
+G:\UnityProject\MyUnityMix2020\Assets\StreamingAssets\HotFix_Project.dll
+G:\UnityProject\MyUnityMix2020\Assets\StreamingAssets\HotFix_Project.pdb
+G:\UnityProject\MyUnityMix2020\Assets\Samples\ILRuntime\2.0.2\Demo\HotFix_Project~\obj\Debug\HotFix_Project.dll
+G:\UnityProject\MyUnityMix2020\Assets\Samples\ILRuntime\2.0.2\Demo\HotFix_Project~\obj\Debug\HotFix_Project.pdb
